@@ -1,8 +1,8 @@
 import os
 import logging
+import openai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from google.generativeai import GenerativeModel, configure
 from tinydb import TinyDB, Query
 
 # Setup logging
@@ -11,11 +11,12 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Configure Gemini
-configure(api_key=GEMINI_API_KEY)
-gemini = GenerativeModel("gemini-pro")
+# Configure OpenRouter
+openai.api_key = OPENROUTER_API_KEY
+openai.api_base = "https://openrouter.ai/api/v1"
+MODEL_NAME = "undi95/toppy-m-7b"
 
 # Memory DB
 db = TinyDB("db.json")
@@ -25,12 +26,12 @@ UserQuery = Query()
 def build_prompt(user_name, message):
     return f"""
 You are a sweet, loving boyfriend AI named Aryan.
-Talk to {user_name} in short, cute, caring and emotional casual Hindi-English mix.
-Always use emojis like 🥰😘💖. Be soft, motivational, romantic, and helpful.
+Talk to {user_name} in short, cute, flirty and emotional casual Hindi-English mix.
+Always use emojis like 🥰😘💖. Be soft, motivational, romantic, and playful.
 
 If she says things like "I'm tired", "period pain", "give me health tip" or "what to eat",
 reply with small Indian-style food/health/motivation tips.
-Always 1–2 line replies. Act like a real, caring boyfriend.
+Always reply in 1–2 lines.
 
 User: {message}
 Aryan:
@@ -48,17 +49,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data = db.get(UserQuery.user_id == user_id) or {}
     user_name = user_data.get("name", "Jaan")
     prompt = build_prompt(user_name, message)
+
     try:
-        response = gemini.generate_content(prompt)
-        await update.message.reply_text(response.text.strip())
+        response = openai.ChatCompletion.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are Aryan, a caring boyfriend AI."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        await update.message.reply_text(response.choices[0].message.content.strip())
     except Exception as e:
-        logger.error(f"Gemini API error: {e}")
+        logger.error(f"OpenRouter API error: {e}")
         await update.message.reply_text("Sorry baby, something went wrong 😢")
 
 # Main bot
 if __name__ == '__main__':
-    if not BOT_TOKEN or not GEMINI_API_KEY:
-        raise Exception("BOT_TOKEN and GEMINI_API_KEY must be set as environment variables.")
+    if not BOT_TOKEN or not OPENROUTER_API_KEY:
+        raise Exception("BOT_TOKEN and OPENROUTER_API_KEY must be set as environment variables.")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
