@@ -16,7 +16,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 # Configure OpenRouter
 openai.api_key = OPENROUTER_API_KEY
 openai.api_base = "https://openrouter.ai/api/v1"
-MODEL_NAME = "undi95/toppy-m-7b"
+MODEL_NAME = "sarvamai/sarvam-m:free"  # ✅ Using FREE model
 
 # Memory DB
 db = TinyDB("db.json")
